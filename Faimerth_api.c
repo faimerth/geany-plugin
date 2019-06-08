@@ -42,19 +42,7 @@ static gint source_id;
 
 static const gint HL_INDICATOR = GEANY_INDICATOR_SEARCH;
 
-////////////////////////
-//string function
-//count meaningfull characters
-uLL count_graph(char *str);
-
-//remove trailing and leading space&return&newline&tab
-int removeblank(char* str);
-
-//non-overlap:str,ans
-//support %f,%e,%d
-//assume str & name is safe
-uLL build_placeholder_repalce(const char *str,const char *name,char *ans,uLL maxlen);
-//////////////////////////////
+#include "Faimerth_core.h"
 
 //-----------------config----------------
 #include "Faimerth_config.h"
@@ -405,7 +393,7 @@ void item_activate_op(GtkMenuItem *menuitem, uLL gdata)
 #include "Faimerth_gui.h"
 void plugin_init(GeanyData *data)
 {
-	LL i,j,k;
+	LL i,j,k,a,b,c;
 	FILE *temp;
 	//------initailization--------
 
@@ -434,6 +422,17 @@ void plugin_init(GeanyData *data)
 		G_DIR_SEPARATOR_S, "faimerth", G_DIR_SEPARATOR_S, "general.conf", NULL);
 	config_stat[CMD_CONFIG].file_name = g_strconcat(geany->app->configdir, G_DIR_SEPARATOR_S, "plugins",
 		G_DIR_SEPARATOR_S, "faimerth", G_DIR_SEPARATOR_S, "custom-command.conf", NULL);
+
+	a=config_exist(config_stat[GENERAL_CONFIG].file_name);
+	if (a>0)
+	{
+		generate_empty_general_config(a);
+	}
+	a=config_exist(config_stat[CMD_CONFIG].file_name);
+	if (a>0)
+	{
+		generate_empty_cmd_config(a);
+	}
 	for (i=0;i<config_size;i++) {load_config(i);}
 
 	//autohilight

@@ -8,13 +8,14 @@ static struct config_item{
 	}ini;
 	union{
 		uLL *num;
-		char *str;
+		char **str;
 	}value;
 };
 static struct config_dir{
 	char *name;
 	uLL item_size;
 	struct config_item *arr;
+	char *help;
 };
 static uLL mode_switch[2][4]={{0,2,0,0},{0x2A2AA5,3,0,0}};//mode switch 'caret_styling'
 static struct config_item mode_switch_config[8]={
@@ -29,7 +30,7 @@ static struct config_item mode_switch_config[8]={
 };
 static uLL config_dir_size=1;
 static struct config_dir config_dir[]={
-	{"mode",8,mode_switch_config},
+	{"mode",8,mode_switch_config,"#foreground,background,bold,italic\n"},
 };
 
 //----CMD----------
@@ -117,7 +118,7 @@ LL load_general_config()
 	char *config_file=config_stat[GENERAL_CONFIG].file_name;
 	LL i,j,k,l;
 	struct config_item *items;
-	if (assert(0,config_file>0),"general_config_file not present")
+	if (assert(0,config_file>0,"general_config_file not present"))
 	{
 #ifdef DEBUG
 	printf("plugin load config from <%s>\n",config_file);
@@ -215,5 +216,15 @@ LL delete_config()
 			}
 		}
 	}
+	return 0;
+}
+
+uLL generate_empty_cmd_config(uLL fd)
+{
+	close_config(fd);
+}
+uLL generate_empty_general_config(uLL fd)
+{
+	close_config(fd);
 	return 0;
 }

@@ -2,6 +2,8 @@
 #include <string.h>
 #include <BasicIntegerArithmetic.h>
 #include <ctype.h>
+#include <LinuxKernelSystemCall.h>
+#include <LinuxKernelDefinition.h>
 
 uLL count_graph(char *str)
 {
@@ -63,7 +65,24 @@ uLL build_placeholder_repalce(const char *str,const char *name,char *ans,uLL max
 	ans[0]=0;
 	return (uLL)0-1;
 }
-
+uLL config_exist(const char *path)
+{
+	uLL a,b,c;
+	struct linux_file_stat t;
+	a=stat(path,&t);
+	if ((LL)a<0)
+	{
+		a=open(path,O_CREAT,00666);
+		return a;
+	}
+	return 0;
+}
+uLL close_config(const uLL fd)
+{
+	uLL a;
+	a=close(fd);
+	return a;
+}
 #ifndef NOMAIN
 int main()
 {
