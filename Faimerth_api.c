@@ -242,7 +242,7 @@ int get_id(const *str)
 	long i;
 	for (i=2;i<ftsize;i++)
 	{
-		if (strcmp(str,fty[i].name)==0) {return i;}
+		if (strcmp(str,fty[i].name.s)==0) {return i;}
 	}
 	return 0;
 }

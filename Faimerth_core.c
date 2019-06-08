@@ -4,6 +4,48 @@
 #include <ctype.h>
 #include <LinuxKernelSystemCall.h>
 #include <LinuxKernelDefinition.h>
+static inline uLL printf_int(uLL x,uLL radix,char *ans)
+{
+	static char hex[]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+	uLL i,j,k;
+	k=0;
+	if (radix==(uLL)0-10)
+	{
+		if ((LL)x<0)
+		{
+			k=1;x=(uLL)0-x;
+		}
+		radix=10;
+	}
+	if (radix==10)
+	{
+		for (i=0;;i++)
+		{
+			ans[i]=x%10+'0';
+			x=x/10;
+			if (x==0) {break;}
+		}
+	}
+	else
+	{
+		k=(1<<radix)-1;
+		for (i=0;;i++)
+		{
+			ans[i]=hex[x&k];
+			x=x>>radix;
+			if (x==0) {break;}
+		}
+	}
+	if (k==1)
+	{
+		ans[++i]='-';
+	}
+	for (j=0;j<(i+1)/2;j++)
+	{
+		k=ans[j];ans[j]=ans[i-j];ans[i-j]=k;
+	}
+	return i+1;
+}
 
 uLL count_graph(char *str)
 {
@@ -22,6 +64,7 @@ int removeblank(char *str)
 	if (i<=j) {memcpy(str,&str[i],j-i+1);str[j-i+1]='\0';} else {str[0]='\0';}
 	return 0;
 }
+
 //non-overlap:str,ans
 //support %f,%e,%d
 //assume str & name is safe
@@ -72,7 +115,7 @@ uLL config_exist(const char *path)
 	a=stat(path,&t);
 	if ((LL)a<0)
 	{
-		a=open(path,O_CREAT,00666);
+		a=open(path,O_WRONLY|O_CREAT,00666);
 		return a;
 	}
 	return 0;
@@ -83,6 +126,41 @@ uLL close_config(const uLL fd)
 	a=close(fd);
 	return a;
 }
+LL write_buf(const uLL fd,char *buf,uLL size,const char *str,const uLL limit)
+{
+	LL i;
+	for (i=0;str[i]>0;)
+	{
+		for (;(i<limit-size)&&(str[i]>0);i++)
+		{
+			buf[size+i]=str[i];
+		}
+		if (size+i==limit)
+		{
+			write(fd,buf,limit);
+			size=0;
+		}
+		else {size+=i;}
+	}
+	return size;
+}
+LL write_buf2(const uLL fd,char *buf,uLL size,const uLL x,const uLL limit)
+{
+	LL i;
+	char tmp[20];
+	i=printf_int(x,4,tmp+2)+2;
+	tmp[0]='0';tmp[1]='x';tmp[i]=0;
+	size=write_buf(fd,buf,size,tmp,limit);
+	return size;
+}
+LL write_flush(const uLL fd,char *buf,const uLL size)
+{
+#ifdef DEBUG
+	buf[size]=0;write(1,buf,size);
+#endif
+	return write(fd,buf,size);
+}
+
 #ifndef NOMAIN
 int main()
 {

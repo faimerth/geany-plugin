@@ -1,6 +1,12 @@
+static struct string{
+	LL size;
+	char *s;
+};
+#define sstring(str) {sizeof(str),str}
+
 //----general----------
 static struct config_item{
-	char *name;
+	struct string name;
 	char type;//0 int, 1 string
 	union{
 		uLL num;
@@ -12,25 +18,25 @@ static struct config_item{
 	}value;
 };
 static struct config_dir{
-	char *name;
+	struct string name;
 	uLL item_size;
 	struct config_item *arr;
-	char *help;
+	struct string help;
 };
 static uLL mode_switch[2][4]={{0,2,0,0},{0x2A2AA5,3,0,0}};//mode switch 'caret_styling'
 static struct config_item mode_switch_config[8]={
-	{"clr_on_0",0,{0x2A2AA5},{&mode_switch[1][0]}},
-	{"clr_on_1",0,{3},{&mode_switch[1][1]}},
-	{"clr_on_2",0,{0},{&mode_switch[1][2]}},
-	{"clr_on_3",0,{0},{&mode_switch[1][3]}},
-	{"clr_off_0",0,{0x000000},{&mode_switch[0][0]}},
-	{"clr_off_1",0,{2},{&mode_switch[0][1]}},
-	{"clr_off_2",0,{0},{&mode_switch[0][2]}},
-	{"clr_off_3",0,{0},{&mode_switch[0][3]}},
+	{sstring("clr_on_0"),0,{0x2A2AA5},{&mode_switch[1][0]}},
+	{sstring("clr_on_1"),0,{3},{&mode_switch[1][1]}},
+	{sstring("clr_on_2"),0,{0},{&mode_switch[1][2]}},
+	{sstring("clr_on_3"),0,{0},{&mode_switch[1][3]}},
+	{sstring("clr_off_0"),0,{0x000000},{&mode_switch[0][0]}},
+	{sstring("clr_off_1"),0,{2},{&mode_switch[0][1]}},
+	{sstring("clr_off_2"),0,{0},{&mode_switch[0][2]}},
+	{sstring("clr_off_3"),0,{0},{&mode_switch[0][3]}},
 };
 static uLL config_dir_size=1;
 static struct config_dir config_dir[]={
-	{"mode",8,mode_switch_config,"#foreground,background,bold,italic\n"},
+	{sstring("mode"),8,mode_switch_config,sstring("#foreground,background,bold,italic\n")},
 };
 
 //----CMD----------
@@ -43,13 +49,18 @@ static struct {
 		}cmd[4];
 		char *exe[4][4];
 	};
-	char *name,*loc;
+	struct string name,loc;
 }fty[]={
-	{0,{{{0,},}},"Universal",0},
-	{0,{{{0,},}},"Default",0},
-	{0,{{{0,},}},"C",".c"},
-	{0,{{{0,},}},"C++",".cpp"}};
-
+	{0,{{{0,},}},sstring("Universal"),{0,0}},
+	{0,{{{0,},}},sstring("Default"),{0,0}},
+	{0,{{{0,},}},sstring("C"),sstring(".c")},
+	{0,{{{0,},}},sstring("C++"),sstring(".cpp")}};
+static struct string fty_d[]={
+	sstring("#External program executed for exec shortcuts\n#%e -- no extension\n#%f -- full path\n#%d -- directory\n"),
+	sstring("#Action for unkown filetype\n"),
+	sstring("#Action for C files\n"),
+	sstring("#Action for C++ files\n"),
+};
 static const uLL fey[]={4/*number of entries*/,'L'+'B'*0x100,'E'+'X'*0x100,'P'+'A'*0x100,'W'+'D'*0x100};
 static int pid=-1;
 /////////////////////////////////
@@ -96,7 +107,7 @@ LL load_cmd_config()
 		printf("load <%s> cmd %d <%s> [%s]::\n",fty[i].name,l,(char*)&fey[j+1],(char*)&k);
 	#endif
 					if (fty[i].exe[l][j]>0) {g_free(fty[i].exe[l][j]);}
-					fty[i].exe[l][j] = utils_get_setting_string(config, fty[i].name, (gchar*)&k, NULL);
+					fty[i].exe[l][j] = utils_get_setting_string(config, fty[i].name.s, (gchar*)&k, NULL);
 	#ifdef DEBUG
 		printf("\t%s\n",fty[i].exe[l][j]);
 	#endif
@@ -133,16 +144,16 @@ LL load_general_config()
 			{
 				if (items[j].type==0)
 				{
-					*(items[j].value.num)=utils_get_setting_integer(config,config_dir[i].name,items[j].name,items[j].ini.num);
+					*(items[j].value.num)=utils_get_setting_integer(config,config_dir[i].name.s,items[j].name.s,items[j].ini.num);
 #ifdef DEBUG
-	printf("load %s : %s ::\n\t%lld\n",config_dir[i].name,items[j].name,*(items[j].value.num));
+	printf("load %s : %s ::\n\t%lld\n",config_dir[i].name.s,items[j].name.s,*(items[j].value.num));
 #endif
 				}
 				else
 				{
-					*(items[j].value.str)=utils_get_setting_string(config,config_dir[i].name,items[j].name,items[j].ini.str);
+					*(items[j].value.str)=utils_get_setting_string(config,config_dir[i].name.s,items[j].name.s,items[j].ini.str);
 #ifdef DEBUG
-	printf("load %s : %s ::\n\t%s\n",config_dir[i].name,items[j].name,*(items[j].value.num));
+	printf("load %s : %s ::\n\t%s\n",config_dir[i].name.s,items[j].name.s,*(items[j].value.num));
 #endif
 				}
 			}
@@ -221,10 +232,61 @@ LL delete_config()
 
 uLL generate_empty_cmd_config(uLL fd)
 {
+	uLL i,j,k,l,size,p;
+	char buf[4096];size=0;p=0;
+	buf[p++]='#';
+	p=write_buf2(fd,buf,p,ftsize-2,4096);
+	p=write_buf(fd,buf,p," filetypes, ",4096);
+	p=write_buf2(fd,buf,p,max_cmd,4096);
+	p=write_buf(fd,buf,p," command support\n\n",4096);
+	for (i=0;i<ftsize;i++)
+	{
+		p=write_buf(fd,buf,p,"[",4096);
+		p=write_buf(fd,buf,p,fty[i].name.s,4096);
+		p=write_buf(fd,buf,p,"]\n",4096);
+		p=write_buf(fd,buf,p,fty_d[i].s,4096);
+		for (j=0;j<fey[0];j++)
+		{
+			k=fey[j+1]+((uLL)'_'<<16)+((uLL)'0'<<24)+((l+'0')<<32);
+			p=write_buf(fd,buf,p,(char*)&k,4096);
+			p=write_buf(fd,buf,p,"=\n",4096);
+		}
+		p=write_buf(fd,buf,p,"\n",4096);
+	}
+	write_flush(fd,buf,p);
 	close_config(fd);
 }
 uLL generate_empty_general_config(uLL fd)
 {
+	LL i,j,k,l,size,p;
+	char buf[4096];size=0;p=0;
+	struct config_item *items;
+	for (i=0;i<config_dir_size;i++)
+	{
+		p=write_buf(fd,buf,p,"[",4096);
+		p=write_buf(fd,buf,p,config_dir[i].name.s,4096);
+		p=write_buf(fd,buf,p,"]\n",4096);
+		p=write_buf(fd,buf,p,config_dir[i].help.s,4096);
+		l=config_dir[i].item_size;
+		items=config_dir[i].arr;
+		for (j=0;j<l;j++)
+		{
+			p=write_buf(fd,buf,p,items[j].name.s,4096);
+			p=write_buf(fd,buf,p,"=",4096);
+			if (items[j].type==0)
+			{
+				p=write_buf2(fd,buf,p,items[j].ini.num,4096);
+			}
+			else if (items[j].type==1)
+			{
+				p=write_buf(fd,buf,p,items[j].ini.str,4096);
+			}
+			else {;}
+			p=write_buf(fd,buf,p,"\n",4096);
+		}
+		p=write_buf(fd,buf,p,"\n",4096);
+	}
+	write_flush(fd,buf,p);
 	close_config(fd);
 	return 0;
 }
